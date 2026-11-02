@@ -29575,10 +29575,6 @@ collision_layer = 512
 collision_mask = 2
 monitorable = false
 script = ExtResource("185_jr7kp")
-event = &"rooftop_race_won"
-event_data = {
-"rival": "mun"
-}
 location_id = &"race_start"
 discover_location = false
 target_id = &"race_start"

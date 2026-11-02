@@ -1011,3 +1011,6 @@ WEATHER_CLOUDY,Cloudy,Nhiều mây
 WEATHER_RAIN,Rain,Mưa
 WEATHER_STORM,Storm,Giông bão
 WEATHER_FOG,Fog,Sương mù
+RACE_GO,"Race Mun to the temple-hall roof! {seconds} s",Đua với Mun tới mái chùa! {seconds} giây
+RACE_WON,You beat Mun across the rooftops!,Bạn đã thắng Mun trên những mái nhà!
+RACE_LOST,Too slow — Mun got there first. Back to the start to try again.,Chậm quá — Mun tới trước rồi. Quay lại vạch xuất phát để thử lại.

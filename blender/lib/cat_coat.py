@@ -154,9 +154,9 @@ def fields(p: np.ndarray, n: np.ndarray, part_id: np.ndarray) -> dict[str, np.nd
     # Forehead 'M' mark right above/between the eyes (in head design space `ph`)
     u_m = ahx / 0.0165
     hz_m = 0.2515 + 0.0088 * np.sin(np.clip(u_m, 0.0, 1.0) * math.pi * 1.15) - 0.0032 * (u_m ** 2)
-    m_arch = np.exp(-((hz - hz_m) / 0.0020) ** 2) * (1.0 - smoothstep(0.0165, 0.0205, ahx))
-    brow_v1 = np.exp(-((ahx - 0.0036) / 0.0014) ** 2) * smoothstep(0.245, 0.250, hz) * (1.0 - smoothstep(0.262, 0.268, hz))
-    brow_v2 = np.exp(-((ahx - 0.0098) / 0.0015) ** 2) * smoothstep(0.249, 0.254, hz) * (1.0 - smoothstep(0.264, 0.270, hz))
+    m_arch = np.exp(-((hz - hz_m) / 0.0028) ** 2) * (1.0 - smoothstep(0.0165, 0.0205, ahx))
+    brow_v1 = np.exp(-((ahx - 0.0036) / 0.0019) ** 2) * smoothstep(0.245, 0.250, hz) * (1.0 - smoothstep(0.262, 0.268, hz))
+    brow_v2 = np.exp(-((ahx - 0.0098) / 0.0020) ** 2) * smoothstep(0.249, 0.254, hz) * (1.0 - smoothstep(0.264, 0.270, hz))
     m_env = smoothstep(-0.175, -0.192, hy) * smoothstep(0.243, 0.248, hz) * (1.0 - smoothstep(0.266, 0.272, hz))
     m_mark = np.clip(m_arch * 0.92 + (brow_v1 + brow_v2) * 0.85, 0.0, 1.0) * m_env
 
@@ -257,7 +257,7 @@ def fields(p: np.ndarray, n: np.ndarray, part_id: np.ndarray) -> dict[str, np.nd
         * (1.0 - smoothstep(0.165, 0.198, zw))
         * (1.0 - smoothstep(0.032, 0.046, axw))
     )
-    belly = np.clip(np.maximum(white_zone, np.maximum(cream_flank * 0.60, eye_ring * 0.35)), 0.0, 1.0)
+    belly = np.clip(np.maximum(white_zone, np.maximum(cream_flank * 0.60, eye_ring * 0.18)), 0.0, 1.0)
     belly *= is_skin * (1.0 - nose) * (1.0 - paw_pad) * (1.0 - lid_rim)
 
     # Fade stripes smoothly across the white bib, paws, and muzzle
@@ -464,8 +464,10 @@ def albedo(F: dict[str, np.ndarray], p: np.ndarray, palette: str = "cam") -> np.
     agouti = F["agouti"]
     coat_var = F["coat_var"]
 
-    base = lerp(P["base"], P["base_hi"], smoothstep(-0.25, 0.35, agouti))
-    base = base * (1.0 + 0.06 * coat_var[:, None])
+    # Agouti / coat variation stay subtle: strong low-frequency contrast reads as camouflage
+    # blotches at gameplay distance (the shell fur adds the fine per-hair variation).
+    base = lerp(P["base"], P["base_hi"], 0.35 + 0.30 * smoothstep(-0.45, 0.55, agouti))
+    base = base * (1.0 + 0.025 * coat_var[:, None])
 
     # Richer golden-amber tone along the dorsal saddle and top of head
     dorsal_warmth = smoothstep(0.165, 0.225, z) * smoothstep(-0.20, 0.18, y)

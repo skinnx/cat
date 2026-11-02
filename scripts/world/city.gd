@@ -77,6 +77,11 @@ func _ready() -> void:
 	environment_ctrl = get_node_or_null(^"WorldEnvironment")
 	night_lights = get_node_or_null(^"NightLights")
 	GameEvents.area_entered.connect(_on_area_entered)
+	if get_node_or_null(^"RooftopRace") == null:
+		var race := Node3D.new()
+		race.name = "RooftopRace"
+		race.set_script(load("res://scripts/world/rooftop_race.gd"))
+		add_child(race)
 
 
 func _on_area_entered(_id: StringName) -> void:

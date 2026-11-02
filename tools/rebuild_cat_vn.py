@@ -349,10 +349,42 @@ def _head_design_disp(ph: np.ndarray, jaw_w: np.ndarray, mask_mult: np.ndarray) 
     return d
 
 
+def strand_components(tris: np.ndarray, n: int) -> np.ndarray:
+    """Connected-component label per vertex (union-find over triangle edges)."""
+    parent = np.arange(n)
+
+    def find(a: int) -> int:
+        while parent[a] != a:
+            parent[a] = parent[parent[a]]
+            a = parent[a]
+        return a
+
+    for t in tris:
+        r0 = find(int(t[0]))
+        for v in t[1:]:
+            r = find(int(v))
+            if r != r0:
+                parent[r] = r0
+    return np.array([find(i) for i in range(n)])
+
+
+def rigid_strand_disp(wh: np.ndarray, wh_tris: np.ndarray, d: np.ndarray, body: np.ndarray) -> np.ndarray:
+    """Per-strand constant displacement = the displacement at the strand's root (the vertex
+    closest to the body surface)."""
+    labels = strand_components(wh_tris, len(wh))
+    out = np.zeros_like(d)
+    for lab in np.unique(labels):
+        idx = np.nonzero(labels == lab)[0]
+        dist = np.linalg.norm(wh[idx, None, :] - body[None, ::4, :], axis=-1).min(axis=1)
+        out[idx] = d[idx[np.argmin(dist)]]
+    return out
+
+
 def sculpt_vn_cat_head(body_pos: np.ndarray, body_nrm: np.ndarray, body_col1: np.ndarray,
                        body_joints: np.ndarray, body_weights: np.ndarray, body_tris: np.ndarray,
                        eye0_pos: np.ndarray, eye1_pos: np.ndarray,
-                       wh_pos: np.ndarray, wh_joints: np.ndarray, wh_weights: np.ndarray):
+                       wh_pos: np.ndarray, wh_joints: np.ndarray, wh_weights: np.ndarray,
+                       wh_tris: np.ndarray):
     p_g = body_pos.copy()
     wh_g = wh_pos.copy()
 
@@ -424,9 +456,13 @@ def sculpt_vn_cat_head(body_pos: np.ndarray, body_nrm: np.ndarray, body_col1: np
     wh_jaw_w = np.sum(np.where(wh_joints[wh_hm] == 20, wh_weights[wh_hm], 0.0), axis=1)
     wh_d_ph = _head_design_disp(wh_ph, wh_jaw_w, np.ones(len(wh_ph), dtype=np.float64))
     wh_d_bl = A.head_to_world_np(wh_ph + wh_d_ph) - A.head_to_world_np(wh_ph)
-    wh_g[wh_hm, 0] += wh_d_bl[:, 0].astype(np.float32)
-    wh_g[wh_hm, 1] += wh_d_bl[:, 2].astype(np.float32)
-    wh_g[wh_hm, 2] -= wh_d_bl[:, 1].astype(np.float32)
+    wh_d = np.zeros_like(wh_g)
+    wh_d[wh_hm, 0] = wh_d_bl[:, 0]
+    wh_d[wh_hm, 1] = wh_d_bl[:, 2]
+    wh_d[wh_hm, 2] = -wh_d_bl[:, 1]
+    # Move each whisker strand rigidly with the skin under its root: the head field has ~1 mm
+    # smoothstep edges, so displacing every strand vertex independently kinks the strands.
+    wh_g = wh_g + rigid_strand_disp(wh_g, wh_tris, wh_d, p_g)
 
     # Compute welded vertex normals across `uniq_inv` so UV seams are 100% smooth
     v0, v1, v2 = p_g[body_tris[:, 0]], p_g[body_tris[:, 1]], p_g[body_tris[:, 2]]
@@ -471,6 +507,9 @@ def main():
     wh_weights = cache["wh_weights"]
 
     geom_only = "--geom-only" in sys.argv
+    # --tex-only: regenerate textures from the GLB's current (already sculpted) geometry and its
+    # current AO/normal maps; no face clean-up pass and no geometry sculpt (both are already applied).
+    tex_only = "--tex-only" in sys.argv
     if not geom_only:
         # 1. Load or rasterize 2048x2048 UV maps from original rest pose
         S2 = 2048
@@ -484,12 +523,12 @@ def main():
         face_w = _sstep(-0.135, -0.175, y_bl) * is_skin_map
 
         # Smooth AO on outer face skin so old baked mustache/eye-socket trenches don't darken the face
-        w_ao = (face_w * 0.88).astype(np.float32)
+        w_ao = (face_w * (0.0 if tex_only else 0.88)).astype(np.float32)
         ao = (orig_ao * (1.0 - w_ao) + np.maximum(orig_ao, 0.90) * w_ao).astype(np.float32)
 
         # Smooth normal map on the face so our new 3D vertex normals control the cheek/muzzle shading cleanly
         flat_nrm = np.array([0.5, 0.5, 1.0], dtype=np.float32)
-        w_nrm = (face_w * 0.78)[..., None].astype(np.float32)
+        w_nrm = (face_w * (0.0 if tex_only else 0.78))[..., None].astype(np.float32)
         nrm_clean = orig_nrm[..., :3] * (1.0 - w_nrm) + flat_nrm * w_nrm
         n_vec = nrm_clean * 2.0 - 1.0
         n_vec /= np.linalg.norm(n_vec, axis=-1, keepdims=True) + 1e-9
@@ -538,10 +577,14 @@ def main():
         save_png_pil(os.path.join(TEX_DIR, "cat_whiskers.png"), TX.whisker_atlas(256, 1024))
 
     # 7. Refine 3D head/muzzle sculpt on CatBody and CatWhiskers in head design space
-    new_body_pos, new_body_nrm, new_wh_pos = sculpt_vn_cat_head(
-        body_pos, body_nrm, body_col1, body_joints, body_weights, body_tris,
-        eye0_pos, eye1_pos, wh_pos, wh_joints, wh_weights
-    )
+    if tex_only:
+        new_body_pos, new_body_nrm, new_wh_pos = body_pos, body_nrm, wh_pos
+    else:
+        new_body_pos, new_body_nrm, new_wh_pos = sculpt_vn_cat_head(
+            body_pos, body_nrm, body_col1, body_joints, body_weights, body_tris,
+            eye0_pos, eye1_pos, wh_pos, wh_joints, wh_weights,
+            _get_acc_np(gltf, bv_chunks, 30).reshape(-1, 3)
+        )
     _set_acc_np(gltf, bv_chunks, 0, new_body_pos)
     _set_acc_np(gltf, bv_chunks, 1, new_body_nrm)
     _set_acc_np(gltf, bv_chunks, 24, new_wh_pos)

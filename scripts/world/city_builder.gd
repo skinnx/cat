@@ -2135,7 +2135,7 @@ func _build_interactables() -> void:
 	_ia(S + "pickup_item.gd", "Pickup_BinsKey", Vector3(-104.5, 0.05, -10.0), {"item_id": &"key", "target_id": &"bins_key_spot"})
 	_ia(S + "pickup_item.gd", "Pickup_LegBand", Vector3(10.5, 0.6, 74.0), {"item_id": &"leg_band", "target_id": &"leg_band_spot"}).set_meta(&"snap_from", 0.8)
 	_ia(S + "pickup_item.gd", "Pickup_Letter", Vector3(34.6, 0.05, -76.0), {"item_id": &"letter", "target_id": &"postman_bag"})
-	_ia(S + "quest_trigger.gd", "Trigger_RaceStart", cam_nap_pos + Vector3(6.0, 0.0, 0.0), {"event": &"rooftop_race_won", "event_data": {"rival": "mun"}, "location_id": &"race_start", "target_id": &"race_start", "discover_location": false})
+	_ia(S + "quest_trigger.gd", "Trigger_RaceStart", cam_nap_pos + Vector3(6.0, 0.0, 0.0), {"event": &"reach_location", "location_id": &"race_start", "target_id": &"race_start", "discover_location": false})
 	_ia(S + "quest_trigger.gd", "Trigger_TempleRoof", hall_roof_pos(), {"event": &"reach_location", "location_id": &"temple_roof", "box_size": Vector3(10.0, 3.0, 4.0)})
 	# ---- knockable objects (~25) ----
 	_build_knockables()

@@ -75,6 +75,8 @@ pose_sleep|pose_run|pose_meow` for stills via `tools/screenshot.sh`).
   textures (import side effect), not separate sources.
 
 ## Tripo3D reference generation (`tools/tripo/tripo_cat.py`)
+> Note: `tools/tripo/tripo_cat.py` is not in the repository yet; the commands below need it.
+
 Calls the Tripo3D v3 API (text-to-model / image-to-model, H3.1 `v3.1-20260211`, PBR, detailed) to
 produce a stylised "AAA + funny" cat as a *design reference* in `qa/out/tripo/<tag>/model.glb`.
 ```bash
@@ -85,3 +87,20 @@ py -3 tools/tripo/tripo_cat.py --dry-run                      # inspect payload,
 ```
 The Tripo mesh is NOT a drop-in for `cat.glb`: it has no contract rig/clips. Use it as the sculpt
 reference (shape proportions, face) and feed changes back into `cat_anatomy.py` / `cat_sdf.py`.
+
+## VN orange tabby pass (`tools/rebuild_cat_vn.py`, PR #1 + review fixes)
+Standalone NumPy/Pillow script that re-sculpts the head/muzzle directly in `cat.glb` and regenerates
+all cat textures from `blender/lib/cat_coat.py` / `cat_tex.py`.
+```bash
+python3 tools/rebuild_cat_vn.py              # sculpt + textures (needs the ORIGINAL-geometry cache)
+python3 tools/rebuild_cat_vn.py --tex-only   # textures only, from the GLB's current geometry/AO/normal
+python3 tools/rebuild_cat_vn.py --geom-only  # sculpt only
+```
+- The full run reads the pre-sculpt geometry from `qa/out/cat-asset/cache/orig_glb_geom.npz`
+  (git-ignored). If that cache is missing it is created from the *current* GLB, which would apply the
+  sculpt a second time — use `--tex-only` on an already-sculpted GLB.
+- Review fixes: whisker strands now move rigidly with the skin under their root (per-vertex
+  displacement kinked the brow whiskers); coat agouti/`coat_var` contrast lowered (it read as
+  camouflage blotches); forehead "M" strokes widened; cream eye-ring weight halved.
+- Known gap: the edited GLB geometry no longer matches `blender/cat/cat.blend`; the eye-socket rim is
+  still visibly faceted in close-ups (needs a Blender-side fix and re-export).

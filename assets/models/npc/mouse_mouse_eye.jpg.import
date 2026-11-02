@@ -2,10 +2,13 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bew6gmutddp27"
+uid="uid://c3d4crnkhiy7e"
 path="res://.godot/imported/mouse_mouse_eye.jpg-968985ddf100d771efd898fd95c3091b.ctex"
 metadata={
 "vram_texture": false
+}
+generator_parameters={
+"md5": "ab61aacb0affcfef7f15f910e1dd4ea8"
 }
 
 [deps]
@@ -23,7 +26,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""
